@@ -1,0 +1,37 @@
+name: Update Top500 DIRECT whitelist
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-top500-direct
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Download and transform upstream rules
+        run: python scripts/update_rules.py
+      - name: Commit only when changed
+        run: |
+          if [[ -n "$(git status --porcelain -- rules/top500-direct.list)" ]]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add rules/top500-direct.list
+            git commit -m 'chore: refresh Top500 direct whitelist'
+            git push
+          else
+            echo 'Rules unchanged.'
+          fi
