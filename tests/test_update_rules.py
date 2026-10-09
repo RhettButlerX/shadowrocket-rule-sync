@@ -8,7 +8,8 @@ class ExtractTests(unittest.TestCase):
         lines += ["DOMAIN-SUFFIX,proxy.example,Proxy", "DOMAIN-SUFFIX,blocked.example,REJECT", "[MITM]", "DOMAIN-SUFFIX,late.example,DIRECT"]
         rules = extract_direct("\n".join(lines))
         self.assertEqual(len(rules), 110)
-        self.assertNotIn("DOMAIN-SUFFIX,proxy.example,Proxy", rules)
+        self.assertIn("DOMAIN-SUFFIX,d1.example", rules)
+        self.assertTrue(all(len(x.split(",")) == 2 for x in rules))
 
     def test_rejects_empty_source(self):
         with self.assertRaises(ValueError):
