@@ -16,14 +16,23 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
       - name: Download and transform upstream rules
         run: python scripts/update_rules.py
+      - name: Validate generated rules
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          lines = [x for x in Path("rules/top500-direct.list").read_text().splitlines() if x and not x.startswith("#")]
+          assert len(lines) >= 100
+          assert all(len(line.split(",")) == 2 for line in lines)
+          print(f"Validated {len(lines)} rules")
+          PY
       - name: Commit only when changed
         run: |
           if [[ -n "$(git status --porcelain -- rules/top500-direct.list)" ]]; then
@@ -31,6 +40,7 @@ jobs:
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add rules/top500-direct.list
             git commit -m 'chore: refresh Top500 direct whitelist'
+            git pull --rebase
             git push
           else
             echo 'Rules unchanged.'
